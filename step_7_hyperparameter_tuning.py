@@ -156,7 +156,7 @@ for name, config in models_and_grids.items():
 results_df = pd.DataFrame(results).sort_values(by=['Val_Recall', 'Val_ROC_AUC'], ascending=[False, False])
 
 print("\n=================================================================")
-print("✅ TUNING COMPLETED. FINAL PERFORMANCE ON VALIDATION SET:")
+print("TUNING COMPLETED. FINAL PERFORMANCE ON VALIDATION SET:")
 print("=================================================================")
 # Display the table clearly
 pd.set_option('display.max_colwidth', 50)
