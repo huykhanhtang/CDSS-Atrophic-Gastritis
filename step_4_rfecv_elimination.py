@@ -48,7 +48,7 @@ rfecv = RFECV(
 rfecv.fit(X_train_scaled, y_train)
 
 optimal_k_math = rfecv.n_features_
-print(f"✅ RFECV Optimization successfully converged at K = {optimal_k_math} features.")
+print(f"RFECV Optimization successfully converged at K = {optimal_k_math} features.")
 
 # ==============================================================================
 # 3. EXTRACT VARIABLE LIST
@@ -116,6 +116,6 @@ with open('List_of_Final_K_Features.txt', 'w') as f:
         f.write(f"{feat}\n")
 
 print("\n--------------------------------------------------")
-print("✅ STEP 4 COMPLETED")
+print("STEP 4 COMPLETED")
 print(f"The pipeline proceeds with a highly robust and compact set of {optimal_k_math} features.")
 print("--------------------------------------------------")
