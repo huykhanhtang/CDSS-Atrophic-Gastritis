@@ -74,7 +74,7 @@ for p in ax.patches:
              '{:1.3f}'.format(width),
              ha="left", fontsize=9) 
 
-plt.xlim(0.5, 1.0) # Set x-axis limit from 0.5 (random guess) to 1.0 (perfect)
+plt.xlim(0.5, 1.0) 
 plt.tight_layout()
 
 # Save the plot
