@@ -1,0 +1,12 @@
+Coating_Greasy
+Coating_Rotten
+Tongue_Cracked
+Tongue_Shape_Normal
+Tongue_Sublingual_Veins
+Tongue_Movement_Flexible
+Tongue_Color_Pale_red
+Tongue_Moisture_Wet
+Tongue_Moisture_Moist
+Tongue_Scalloped
+Coating_Thickness_Thick
+Med_H_pylori_Status_Eradicated
