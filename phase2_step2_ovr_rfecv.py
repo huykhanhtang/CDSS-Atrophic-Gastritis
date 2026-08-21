@@ -21,11 +21,9 @@ train_df = pd.read_csv('Phase2_Train_LASSO_Selected.csv')
 val_df = pd.read_csv('Phase2_Val_LASSO_Selected.csv')
 test_df = pd.read_csv('Phase2_Test_LASSO_Selected.csv')
 
-# Tự động nhận diện 6 cột Target TCM
 target_tcm_cols = [col for col in train_df.columns if col.startswith('Target_TCM_')]
 y_train = train_df[target_tcm_cols]
 
-# Tách biến X (Loại bỏ Target_AG và 6 cột Target TCM)
 X_train = train_df.drop(columns=['Target_AG'] + target_tcm_cols)
 
 available_features = X_train.shape[1]
@@ -40,34 +38,21 @@ X_train_scaled = scaler.fit_transform(X_train)
 print("\nExecuting Multi-label RFECV using Macro F1-Score...")
 print("Please wait, this evaluates subsets across 6 simultaneous disease targets...")
 
-
-# --- BỔ SUNG QUAN TRỌNG: Hàm trích xuất hệ số trung bình cho kiến trúc OvR ---
 def ovr_importance_getter(fitted_estimator):
-    """
-    Hàm này đi vào trong OneVsRestClassifier, trích xuất 6 bộ hệ số (coef_)
-    từ 6 mô hình LogisticRegression, sau đó tính trung bình trị tuyệt đối
-    để nộp lại cho RFECV đánh giá và cắt biến.
-    """
-    # Lấy hệ số của tất cả các mô hình con bên trong
+    
     coefs = np.array([est.coef_[0] for est in fitted_estimator.estimators_])
 
-    # Tính trung bình sức mạnh của từng đặc trưng trên cả 6 mặt trận
     mean_abs_coefs = np.mean(np.abs(coefs), axis=0)
     return mean_abs_coefs
 
-
-# Thuật toán lõi (Base estimator)
 base_estimator = LogisticRegression(C=1, solver='liblinear', class_weight='balanced', random_state=42, max_iter=2000)
 
-# Bọc thuật toán lõi trong kiến trúc One-Vs-Rest
 ovr_estimator = OneVsRestClassifier(base_estimator)
 
-# Cấu hình KFold (Tiêu chuẩn cho đa nhãn)
 from sklearn.model_selection import KFold
 
 cv = KFold(n_splits=5, shuffle=True, random_state=42)
 
-# Khởi tạo RFECV với hàm lấy thuộc tính (importance_getter) tùy chỉnh
 rfecv = RFECV(
     estimator=ovr_estimator,
     step=1,
@@ -78,19 +63,18 @@ rfecv = RFECV(
     n_jobs=-1
 )
 
-# Fit mô hình Multi-label
 rfecv.fit(X_train_scaled, y_train)
 
 optimal_k_math = rfecv.n_features_
-print(f"✅ RFECV Optimization successfully converged at K = {optimal_k_math} features.")
+print(f" RFECV Optimization successfully converged at K = {optimal_k_math} features.")
 
 # ==============================================================================
-# 3. TRÍCH XUẤT DANH SÁCH BIẾN VÀNG
+# 3. EXTRACT VARIABLE LIST
 # ==============================================================================
 selected_features = X_train.columns[rfecv.support_].tolist()
 
 # ==============================================================================
-# 4. VISUALIZATION: BIỂU ĐỒ ĐƠN ĐỈNH TỐI ƯU
+# 4. VISUALIZATION
 # ==============================================================================
 print("Generating Phase 2 RFECV Curve (Figure 2)...")
 
@@ -101,10 +85,8 @@ cv_results = rfecv.cv_results_['mean_test_score']
 min_features = rfecv.min_features_to_select
 x_axis = range(min_features, min_features + len(cv_results))
 
-# Vẽ đường cong chính (Màu tím đặc trưng cho Phase 2)
 plt.plot(x_axis, cv_results, marker='o', linestyle='-', color='#8e44ad', linewidth=2, markersize=5)
 
-# Xử lý trục Y
 y_min = min(cv_results)
 y_max = max(cv_results)
 y_range = y_max - y_min
@@ -116,7 +98,6 @@ else:
 
 y_offset = (plt.ylim()[1] - plt.ylim()[0]) * 0.15
 
-# Vẽ ĐỈNH TỐI ƯU
 optimal_idx = optimal_k_math - min_features
 optimal_score = cv_results[optimal_idx]
 
@@ -140,7 +121,7 @@ plt.close()
 print("-> Saved 'Phase2_Figure_2_OvR_RFECV_Curve.png'")
 
 # ==============================================================================
-# 5. XUẤT FILE CHO CÁC BƯỚC TIẾP THEO
+# 5. EXPORT FILE FOR THE NEXT STEPS
 # ==============================================================================
 print(f"\nFinal {optimal_k_math} Selected Features for TCM Multi-label CDSS:")
 for feat in selected_features:
@@ -157,6 +138,6 @@ with open('Phase2_List_of_Final_K_Features.txt', 'w') as f:
         f.write(f"{feat}\n")
 
 print("\n--------------------------------------------------")
-print("✅ PHASE 2 STEP 2 COMPLETED SUCCESSFULLY.")
+print("PHASE 2 STEP 2 COMPLETED")
 print(f"The pipeline proceeds with a highly robust and compact set of {optimal_k_math} features.")
 print("--------------------------------------------------")
