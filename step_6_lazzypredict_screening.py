@@ -72,7 +72,7 @@ for p in ax.patches:
     width = p.get_width()
     plt.text(width + 0.005, p.get_y() + p.get_height()/2. + 0.15,
              '{:1.3f}'.format(width),
-             ha="left", fontsize=9) # Giảm cỡ chữ xuống 9 để không bị đè lên nhau
+             ha="left", fontsize=9) 
 
 plt.xlim(0.5, 1.0) # Set x-axis limit from 0.5 (random guess) to 1.0 (perfect)
 plt.tight_layout()
