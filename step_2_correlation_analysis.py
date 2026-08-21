@@ -121,12 +121,12 @@ for column in upper_tri.columns:
                 to_drop.append(column)
 
 if highly_correlated_pairs:
-    print("\n⚠️ Highly Correlated Pairs Found:")
+    print("\n Highly Correlated Pairs Found:")
     for pair in highly_correlated_pairs:
         print(f"   - {pair[0]} & {pair[1]}: r = {pair[2]:.3f}")
     print(f"\nFeatures flagged for removal ({len(to_drop)} features): {to_drop}")
 else:
-    print("\n✅ No highly correlated features found. The dataset is optimal.")
+    print("\n No highly correlated features found. The dataset is optimal.")
 
 # ==============================================================================
 # 5. DROP REDUNDANT FEATURES AND EXPORT CLEANED DATASETS
@@ -144,7 +144,7 @@ val_clean.to_csv('Val_No_Collinear.csv', index=False)
 test_clean.to_csv('Test_No_Collinear.csv', index=False)
 
 print("\n--------------------------------------------------")
-print("✅ STEP 2 COMPLETED")
+print("STEP 2 COMPLETED")
 print(f"Final feature count for modeling: {train_clean.shape[1] - 3} (Excluded 3 target columns)")
 print("Files Generated:")
 print("1. Supplemental_Figure_S1_Correlation_Heatmap.svg")
