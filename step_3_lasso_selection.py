@@ -83,7 +83,7 @@ print(f"-> Optimal C (1-SE Rule): {optimal_C_1se:.4f} (Stricter - Selected for f
 # ==============================================================================
 # 4. PLOT 1: GLMNET-STYLE LASSO FIGURES (SIDE-BY-SIDE)
 # ==============================================================================
-print("Generating publication-ready LASSO plots (300 DPI)...")
+print("Generating publication-ready LASSO plots...")
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
@@ -128,7 +128,7 @@ coef_df = pd.DataFrame({
 selected_features_df = coef_df[coef_df['Coefficient'] != 0].sort_values(by='Abs_Coefficient', ascending=False)
 selected_features_list = selected_features_df['Feature'].tolist()
 
-print(f"\n✅ LASSO (1-SE Rule) natively selected {len(selected_features_list)} crucial features out of {len(feature_names)}.")
+print(f"\n LASSO (1-SE Rule) natively selected {len(selected_features_list)} crucial features out of {len(feature_names)}.")
 print("Top Most Important Features:")
 print(selected_features_df.head(15)[['Feature', 'Coefficient']].to_string(index=False))
 
@@ -138,5 +138,5 @@ val_df[columns_to_keep].to_csv('Val_LASSO_Selected.csv', index=False)
 test_df[columns_to_keep].to_csv('Test_LASSO_Selected.csv', index=False)
 
 print("\n--------------------------------------------------")
-print("✅ STEP 3 COMPLETED")
+print("STEP 3 COMPLETED")
 print("--------------------------------------------------")
