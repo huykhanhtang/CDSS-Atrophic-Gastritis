@@ -19,7 +19,6 @@ val_df = pd.read_csv('Val_LASSO_Selected.csv')
 test_df = pd.read_csv('Test_LASSO_Selected.csv')
 
 y_train = train_df['Target_AG']
-# Đã cập nhật chuẩn theo cấu trúc Multi-Label
 X_train = train_df.drop(columns=['Target_AG', 'TCM_Syndromes_1', 'TCM_Syndromes_2'])
 
 available_features = X_train.shape[1]
@@ -31,20 +30,18 @@ X_train_scaled = scaler.fit_transform(X_train)
 # ==============================================================================
 # 2. PURE MATHEMATICAL OPTIMIZATION (RFECV Log-Loss)
 # ==============================================================================
-# Sử dụng C=1 tiêu chuẩn vì LASSO đã lọc quá sạch
 estimator = LogisticRegression(C=1, solver='liblinear', class_weight='balanced', random_state=42, max_iter=2000)
 
 print("\nExecuting Binary RFECV using Negative Log-Loss...")
 
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-# Khởi tạo RFECV
 rfecv = RFECV(
     estimator=estimator,
     step=1,
     cv=cv,
     scoring='neg_log_loss',
-    min_features_to_select=3, # Quét từ 3 biến để vẽ đường cong thấy rõ sự biến thiên
+    min_features_to_select=3, 
     n_jobs=-1
 )
 
@@ -54,14 +51,13 @@ optimal_k_math = rfecv.n_features_
 print(f"✅ RFECV Optimization successfully converged at K = {optimal_k_math} features.")
 
 # ==============================================================================
-# 3. TRÍCH XUẤT DANH SÁCH BIẾN VÀNG
+# 3. EXTRACT VARIABLE LIST
 # ==============================================================================
-# Vì số lượng biến đã rất nhỏ (<=10), ta chấp nhận hoàn toàn kết quả Toán học
-# mà không cần can thiệp ép buộc lâm sàng (No override needed).
+
 selected_features = X_train.columns[rfecv.support_].tolist()
 
 # ==============================================================================
-# 4. VISUALIZATION: BIỂU ĐỒ ĐƠN ĐỈNH TỐI ƯU (FIGURE 3)
+# 4. VISUALIZATION (FIGURE 3)
 # ==============================================================================
 print("Generating Phase 1 RFECV Curve (Figure 3)...")
 plt.figure(figsize=(10, 6))
@@ -71,10 +67,8 @@ cv_results = rfecv.cv_results_['mean_test_score']
 min_features = rfecv.min_features_to_select
 x_axis = range(min_features, min_features + len(cv_results))
 
-# Vẽ đường cong chính (Màu xanh lam)
 plt.plot(x_axis, cv_results, marker='o', linestyle='-', color='#2c7bb6', linewidth=2, markersize=5)
 
-# Xử lý chống sụp đổ trục Y
 y_min = min(cv_results)
 y_max = max(cv_results)
 y_range = y_max - y_min
@@ -85,7 +79,6 @@ else:
     plt.ylim(y_min - margin, min(0, y_max + margin))
 y_offset = (plt.ylim()[1] - plt.ylim()[0]) * 0.15
 
-# Vẽ ĐỈNH TỐI ƯU (Đỉnh này giờ đây vừa là Toán học, vừa là Lâm sàng)
 optimal_idx = optimal_k_math - min_features
 optimal_score = cv_results[optimal_idx]
 
@@ -98,7 +91,6 @@ plt.annotate(f'Optimal Parsimonious Model\nK={optimal_k_math}, Neg Log-Loss={opt
              arrowprops=dict(facecolor='black', shrink=0.05, width=1.5, headwidth=6),
              fontsize=10, fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", fc="#fffacd", ec="gray", lw=1))
 
-# Định dạng
 plt.xlabel('Number of Included Features', fontsize=12)
 plt.ylabel('Negative Log-Loss (Cross-Validated)', fontsize=12)
 plt.tight_layout()
@@ -107,7 +99,7 @@ plt.close()
 print("-> Saved 'Figure_3_RFECV_Curve.png'")
 
 # ==============================================================================
-# 5. XUẤT FILE CHO CÁC BƯỚC TIẾP THEO
+# 5. EXPORT FILE FOR THE NEXT STEPS
 # ==============================================================================
 print(f"\nFinal {optimal_k_math} Selected Features for AG Screening CDSS:")
 for feat in selected_features:
@@ -124,6 +116,6 @@ with open('List_of_Final_K_Features.txt', 'w') as f:
         f.write(f"{feat}\n")
 
 print("\n--------------------------------------------------")
-print("✅ STEP 4 COMPLETED SUCCESSFULLY.")
+print("✅ STEP 4 COMPLETED")
 print(f"The pipeline proceeds with a highly robust and compact set of {optimal_k_math} features.")
 print("--------------------------------------------------")
