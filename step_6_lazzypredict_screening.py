@@ -4,7 +4,6 @@ import seaborn as sns
 from lazypredict.Supervised import LazyClassifier
 import warnings
 
-# Suppress warnings for a clean console output
 warnings.filterwarnings('ignore')
 
 # ==============================================================================
@@ -12,7 +11,6 @@ warnings.filterwarnings('ignore')
 # ==============================================================================
 print("Loading the parsimonious datasets (Optimized K features)...")
 
-# We use the final datasets generated from Step 5
 train_df = pd.read_csv('CDSS_Web_App/Train_Final_K_Features.csv')
 val_df = pd.read_csv('Val_Final_K_Features.csv')
 
@@ -21,7 +19,6 @@ val_df = pd.read_csv('Val_Final_K_Features.csv')
 # ==============================================================================
 print("Isolating features and the primary target (Target_AG)...")
 
-# Target 1: Atrophic Gastritis (Binary Classification for the Screening Stage)
 y_train = train_df['Target_AG']
 X_train = train_df.drop(columns=['Target_AG', 'TCM_Syndromes_1', 'TCM_Syndromes_2'])
 
@@ -37,11 +34,8 @@ print(f"Validation set shape: {X_val.shape}")
 print("\nInitializing LazyPredict to evaluate multiple algorithms simultaneously...")
 print("This may take a minute depending on your CPU...")
 
-# Initialize LazyClassifier
-# We set random_state=42 for reproducibility
 clf = LazyClassifier(verbose=0, ignore_warnings=True, custom_metric=None, random_state=42)
 
-# Fit and evaluate models (Trains on X_train, Evaluates on X_val)
 models_summary, predictions = clf.fit(X_train, X_val, y_train, y_val)
 
 # ==============================================================================
@@ -49,14 +43,11 @@ models_summary, predictions = clf.fit(X_train, X_val, y_train, y_val)
 # ==============================================================================
 print("\n✅ LazyPredict screening completed!")
 
-# Cập nhật: Cấu hình Pandas để không ẩn bớt dòng khi in ra màn hình
 pd.set_option('display.max_rows', None)
 
 print("\nFull Rankings of All Evaluated Models on the Validation Set:")
-# Bỏ hàm .head(10) để in ra toàn bộ danh sách
 print(models_summary[['Accuracy', 'ROC AUC', 'F1 Score', 'Time Taken']])
 
-# Save the full results to a CSV file to include as Supplementary Table S1 in the manuscript
 models_summary.to_csv('Table_S1_LazyPredict_Screening_Results.csv')
 print("\n-> Saved full results to 'Table_S1_LazyPredict_Screening_Results.csv'")
 
@@ -65,14 +56,11 @@ print("\n-> Saved full results to 'Table_S1_LazyPredict_Screening_Results.csv'")
 # ==============================================================================
 print("Generating full performance comparison bar chart (300 DPI)...")
 
-# Cập nhật: Tăng chiều cao của biểu đồ (từ 10 lên 15) để chứa đủ ~30 thuật toán
 plt.figure(figsize=(12, 15))
 sns.set_theme(style="whitegrid")
 
-# Cập nhật: Lấy toàn bộ danh sách thay vì chỉ head(15)
 all_models = models_summary.reset_index()
 
-# Create a bar plot comparing ROC AUC scores
 ax = sns.barplot(x='ROC AUC', y='Model', data=all_models, palette='viridis')
 
 plt.title('Complete Machine Learning Models Ranking by Validation ROC AUC',
@@ -80,7 +68,6 @@ plt.title('Complete Machine Learning Models Ranking by Validation ROC AUC',
 plt.xlabel('Area Under the ROC Curve (Validation Set)', fontsize=12)
 plt.ylabel('Algorithm', fontsize=12)
 
-# Add value labels to the end of each bar
 for p in ax.patches:
     width = p.get_width()
     plt.text(width + 0.005, p.get_y() + p.get_height()/2. + 0.15,
@@ -96,6 +83,6 @@ plt.close()
 print("-> Saved 'Figure_S1_LazyPredict_Full_Comparison.png'")
 
 print("\n--------------------------------------------------")
-print("✅ STEP 6 COMPLETED SUCCESSFULLY.")
+print("✅ STEP 6 COMPLETED")
 print("Next step: Select the top 4-5 core algorithms from this list to proceed to Step 7 (Hyperparameter Tuning).")
 print("--------------------------------------------------")
