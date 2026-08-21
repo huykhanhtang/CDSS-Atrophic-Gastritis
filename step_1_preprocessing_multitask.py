@@ -8,7 +8,6 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.impute import SimpleImputer
 import warnings
 
-# Suppress annoying warnings for clean output
 warnings.filterwarnings('ignore')
 
 # ==============================================================================
@@ -62,13 +61,6 @@ print("Generating advanced Table 1 stratified by AG and non-AG with P-values..."
 
 
 def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test_raw, y1_test):
-    """
-    Tạo Bảng 1 chuẩn quốc tế:
-    - Tách từng tập (Train, Val, Test) thành 2 phân nhóm: non-AG và AG
-    - Tính P-value so sánh giữa nhóm AG vs non-AG (toàn bộ quần thể)
-    - Tính P-value so sánh tính đồng nhất giữa 3 tập (Train vs Val vs Test)
-    """
-    # Gắn nhãn AG vào các DataFrame thô
     train_df = X_train_raw.copy();
     train_df['Target_AG'] = y1_train.values;
     train_df['Cohort'] = 'Train'
@@ -81,7 +73,6 @@ def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test
 
     df_all = pd.concat([train_df, val_df, test_df], ignore_index=True)
 
-    # Đếm số lượng mẫu từng phân nhóm
     n_train_non = (train_df['Target_AG'] == 0).sum();
     n_train_ag = (train_df['Target_AG'] == 1).sum()
     n_val_non = (val_df['Target_AG'] == 0).sum();
@@ -89,7 +80,6 @@ def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test
     n_test_non = (test_df['Target_AG'] == 0).sum();
     n_test_ag = (test_df['Target_AG'] == 1).sum()
 
-    # Nhận diện biến
     continuous_vars = ['Dem_Age', 'Dem_Weight', 'Dem_Height', 'Dem_BMI']
     categorical_vars = [col for col in X_train_raw.columns if col not in continuous_vars]
 
@@ -109,7 +99,7 @@ def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test
     table1_rows = []
 
     # -------------------------------------------------------------
-    # 1. XỬ LÝ BIẾN ĐỊNH LƯỢNG (CONTINUOUS VARIABLES)
+    # 1. HANDLING CONTINUOUS VARIABLES
     # -------------------------------------------------------------
     for var in continuous_vars:
         if var in df_all.columns:
@@ -124,7 +114,6 @@ def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test
                 f'Test AG (n={n_test_ag})': get_cont_stat(test_df[test_df['Target_AG'] == 1][var])
             }
 
-            # P-value 1: So sánh non-AG vs AG trên toàn bộ thuần tập (Independent t-test)
             g_non = df_all[df_all['Target_AG'] == 0][var].dropna()
             g_ag = df_all[df_all['Target_AG'] == 1][var].dropna()
             try:
@@ -133,7 +122,6 @@ def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test
                 p_ag = np.nan
             row['P-value (AG vs non-AG)'] = format_p(p_ag)
 
-            # P-value 2: So sánh cân bằng giữa 3 tập Train vs Val vs Test (One-way ANOVA)
             try:
                 _, p_cohort = stats.f_oneway(train_df[var].dropna(), val_df[var].dropna(), test_df[var].dropna())
             except Exception:
@@ -143,20 +131,18 @@ def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test
             table1_rows.append(row)
 
     # -------------------------------------------------------------
-    # 2. XỬ LÝ BIẾN ĐỊNH LOẠI (CATEGORICAL VARIABLES)
+    # 2. HANDLING CATEGORICAL VARIABLES
     # -------------------------------------------------------------
     for var in categorical_vars:
         if var in df_all.columns:
             unique_vals = sorted(df_all[var].dropna().unique())
 
-            # Tính P-value AG vs non-AG toàn bộ thuần tập (Chi-square test)
             try:
                 contingency_ag = pd.crosstab(df_all[var], df_all['Target_AG'])
                 _, p_ag, _, _ = stats.chi2_contingency(contingency_ag)
             except Exception:
                 p_ag = np.nan
 
-            # Tính P-value giữa 3 tập (Chi-square test)
             try:
                 contingency_cohort = pd.crosstab(df_all[var], df_all['Cohort'])
                 _, p_cohort, _, _ = stats.chi2_contingency(contingency_cohort)
@@ -181,7 +167,6 @@ def generate_table_1_stratified(X_train_raw, y1_train, X_val_raw, y1_val, X_test
     return pd.DataFrame(table1_rows)
 
 
-# Thực thi và xuất Table 1
 table1_stratified_df = generate_table_1_stratified(
     X_train_raw, y1_train,
     X_val_raw, y1_val,
@@ -244,8 +229,8 @@ print("Exporting processed datasets for correlation and modeling phases...")
 # Combine features and targets into final DataFrames
 train_export = X_train_processed.copy()
 train_export['Target_AG'] = y1_train.values
-train_export['TCM_Syndromes_1'] = y2_train.values  # Giữ nguyên bản chữ
-train_export['TCM_Syndromes_2'] = y3_train.values  # Giữ nguyên bản chữ
+train_export['TCM_Syndromes_1'] = y2_train.values  
+train_export['TCM_Syndromes_2'] = y3_train.values  
 
 val_export = X_val_processed.copy()
 val_export['Target_AG'] = y1_val.values
@@ -263,7 +248,7 @@ val_export.to_csv('Processed_Val_Dual_Targets.csv', index=False)
 test_export.to_csv('Processed_Test_Dual_Targets.csv', index=False)
 
 print("--------------------------------------------------")
-print("✅ STEP 1 COMPLETED SUCCESSFULLY.")
+print("✅ STEP 1 COMPLETED")
 print("Files Generated:")
 print("1. Table_1_Baseline_Characteristics.csv")
 print("2. Processed_Train_Dual_Targets.csv")
