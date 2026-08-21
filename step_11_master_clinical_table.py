@@ -6,7 +6,6 @@ import joblib
 from sklearn.metrics import roc_curve, roc_auc_score, recall_score, confusion_matrix
 import warnings
 
-# Suppress warnings
 warnings.filterwarnings('ignore')
 
 # ==============================================================================
@@ -28,9 +27,6 @@ model = joblib.load('Final_CDSS_Screening_Model.pkl')
 # 2. BOOTSTRAPPING FUNCTION FOR 95% CONFIDENCE INTERVALS
 # ==============================================================================
 def calculate_metrics_with_ci(y_true, y_pred, y_proba, n_bootstraps=1000, ci=95):
-    """
-    Runs bootstrap resampling to calculate 95% CI for AUC, Recall, and Specificity.
-    """
     bootstrapped_aucs = []
     bootstrapped_recalls = []
     bootstrapped_specs = []
@@ -38,7 +34,7 @@ def calculate_metrics_with_ci(y_true, y_pred, y_proba, n_bootstraps=1000, ci=95)
     rng = np.random.RandomState(42)
 
     for i in range(n_bootstraps):
-        # Bootstrap by sampling with replacement
+        
         indices = rng.randint(0, len(y_true), len(y_true))
 
         if len(np.unique(y_true.iloc[indices])) < 2:
@@ -49,15 +45,11 @@ def calculate_metrics_with_ci(y_true, y_pred, y_proba, n_bootstraps=1000, ci=95)
         y_pred_b = y_pred[indices]
         y_proba_b = y_proba[indices]
 
-        # AUC
         bootstrapped_aucs.append(roc_auc_score(y_true_b, y_proba_b))
-        # Recall
         bootstrapped_recalls.append(recall_score(y_true_b, y_pred_b))
-        # Specificity
         tn, fp, fn, tp = confusion_matrix(y_true_b, y_pred_b).ravel()
         bootstrapped_specs.append(tn / (tn + fp) if (tn + fp) > 0 else 0)
 
-    # Calculate lower and upper percentiles
     alpha = (100 - ci) / 2.0
 
     metrics = {
@@ -80,8 +72,6 @@ def calculate_metrics_with_ci(y_true, y_pred, y_proba, n_bootstraps=1000, ci=95)
 print("\nCalculating metrics and 95% CIs (Bootstrapping 1000 iterations)...")
 print("This may take a minute...\n")
 
-# NOTE: Use the Optimal Threshold founded in Step 9 here.
-# Assuming it was roughly 0.40 (Replace this with your exact printed value from Step 9 if different)
 OPTIMAL_THRESHOLD = 0.4081
 
 table_data = []
@@ -96,14 +86,11 @@ for split_name, df in datasets.items():
     y_proba = model.predict_proba(X_scaled)[:, 1]
     y_pred = (y_proba >= OPTIMAL_THRESHOLD).astype(int)
 
-    # Store ROC Data for plotting
     fpr, tpr, _ = roc_curve(y, y_proba)
     roc_plot_data[split_name] = {'fpr': fpr, 'tpr': tpr}
 
-    # Calculate metrics with 95% CI
     results = calculate_metrics_with_ci(y, y_pred, y_proba)
 
-    # Format strings for the table (e.g., "0.935 (0.910 - 0.950)")
     auc_str = f"{results['AUC'][0]:.3f} ({results['AUC'][1]:.3f}-{results['AUC'][2]:.3f})"
     recall_str = f"{results['Recall'][0]:.3f} ({results['Recall'][1]:.3f}-{results['Recall'][2]:.3f})"
     spec_str = f"{results['Specificity'][0]:.3f} ({results['Specificity'][1]:.3f}-{results['Specificity'][2]:.3f})"
@@ -122,7 +109,7 @@ for split_name, df in datasets.items():
 master_table_df = pd.DataFrame(table_data)
 
 print("=================================================================")
-print("🏆 TABLE 2: MASTER CLINICAL PERFORMANCE (WITH 95% CI)")
+print("TABLE 2: MASTER CLINICAL PERFORMANCE (WITH 95% CI)")
 print("=================================================================")
 print(master_table_df.to_string(index=False))
 print("=================================================================")
@@ -138,7 +125,6 @@ print("\nGenerating Figure 7: ROC Curves for Train, Validation, and Test Sets...
 plt.figure(figsize=(10, 8))
 sns.set_theme(style="whitegrid")
 
-# Professional color palette for publication
 colors = {'Train': '#2ca02c', 'Validation': '#1f77b4', 'Test': '#d62728'}
 line_styles = {'Train': ':', 'Validation': '--', 'Test': '-'}
 line_widths = {'Train': 2, 'Validation': 2.5, 'Test': 3}
@@ -152,7 +138,6 @@ for split_name, data in roc_plot_data.items():
              linewidth=line_widths[split_name],
              label=f'{split_name} Set (AUC = {auc_val:.3f})')
 
-# Random guess line
 plt.plot([0, 1], [0, 1], color='gray', linestyle='--', lw=1)
 
 plt.xlim([0.0, 1.0])
@@ -169,6 +154,6 @@ plt.close()
 print("-> Saved 'Figure_7_MultiSet_ROC_Curve.png'")
 
 print("\n--------------------------------------------------")
-print("✅ STEP 11 COMPLETED SUCCESSFULLY.")
+print("STEP 11 COMPLETED SUCCESSFULLY.")
 print("You now have the ultimate Table and Figure to prove your model's robustness!")
 print("--------------------------------------------------")
