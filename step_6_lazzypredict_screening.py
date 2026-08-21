@@ -29,7 +29,7 @@ print(f"Training set shape: {X_train.shape}")
 print(f"Validation set shape: {X_val.shape}")
 
 # ==============================================================================
-# 3. RUN LAZYPREDICT TO SCREEN ~30 MACHINE LEARNING ALGORITHMS
+# 3. RUN LAZYPREDICT TO SCREEN MACHINE LEARNING ALGORITHMS
 # ==============================================================================
 print("\nInitializing LazyPredict to evaluate multiple algorithms simultaneously...")
 print("This may take a minute depending on your CPU...")
