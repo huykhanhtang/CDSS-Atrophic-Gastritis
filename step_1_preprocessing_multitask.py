@@ -248,7 +248,7 @@ val_export.to_csv('Processed_Val_Dual_Targets.csv', index=False)
 test_export.to_csv('Processed_Test_Dual_Targets.csv', index=False)
 
 print("--------------------------------------------------")
-print("✅ STEP 1 COMPLETED")
+print("STEP 1 COMPLETED")
 print("Files Generated:")
 print("1. Table_1_Baseline_Characteristics.csv")
 print("2. Processed_Train_Dual_Targets.csv")
