@@ -48,7 +48,7 @@ shap_values = explainer.shap_values(X_train)
 # ==============================================================================
 # 4. GENERATE PUBLICATION-READY SHAP PLOTS (FIGURE 4)
 # ==============================================================================
-print("Generating high-resolution SHAP visualizations (300 DPI)...")
+print("Generating high-resolution SHAP visualizations...")
 
 def format_clinical_name(col_name):
     # 1. Bỏ hoàn toàn các tiền tố bệnh nền và hút thuốc
@@ -141,7 +141,7 @@ shap_df.to_csv('SHAP_Feature_Importance_Scores.csv', index=False)
 print("-> Saved 'SHAP_Feature_Importance_Scores.csv'")
 
 print("\n--------------------------------------------------")
-print("✅ STEP 5 COMPLETED")
+print("STEP 5 COMPLETED")
 print("Files Generated:")
 print("1. Figure_4A_SHAP_Summary_Bubble_Plot.png")
 print("2. Figure_4B_SHAP_Bar_Plot.png")
