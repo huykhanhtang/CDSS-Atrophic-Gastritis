@@ -6,7 +6,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, recall_score, confusion_matrix, accuracy_score, precision_score, f1_score, log_loss
 
-# Import the 7 selected algorithms
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.svm import SVC
@@ -14,7 +13,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import BernoulliNB
 import xgboost as xgb
 
-# Suppress warnings
 warnings.filterwarnings('ignore')
 
 # ==============================================================================
@@ -25,29 +23,22 @@ print("Loading parsimonious datasets (K=9 features)...")
 train_df = pd.read_csv('CDSS_Web_App/Train_Final_K_Features.csv')
 val_df = pd.read_csv('Val_Final_K_Features.csv')
 
-# Isolate features and target
 y_train = train_df['Target_AG']
 X_train = train_df.drop(columns=['Target_AG', 'TCM_Syndromes_1', 'TCM_Syndromes_2'])
 
 y_val = val_df['Target_AG']
 X_val = val_df.drop(columns=['Target_AG', 'TCM_Syndromes_1', 'TCM_Syndromes_2'])
 
-# Standardize the data (Crucial for SVC, KNN, and Logistic Regression)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_val_scaled = scaler.transform(X_val)
 
-# Save the scaler for future CDSS use
 joblib.dump(scaler, 'CDSS_Feature_Scaler.pkl')
 print("-> Saved feature scaler as 'CDSS_Feature_Scaler.pkl'")
 
 # ==============================================================================
 # 2. DEFINE MODELS AND HYPERPARAMETER GRIDS
 # ==============================================================================
-# We configure grids to explore different regularizations and tree structures.
-# class_weight='balanced' is used where applicable to handle potential class imbalances.
-# SVC is set to probability=True to ensure it can output probabilities for the CDSS and Stacking later.
-
 models_and_grids = {
     'LogisticRegression': {
         'model': LogisticRegression(class_weight='balanced', random_state=42),
@@ -117,9 +108,6 @@ best_estimators = {}
 for name, config in models_and_grids.items():
     print(f"Tuning {name}...")
 
-    # Initialize GridSearchCV
-    # cv=5 means 5-Fold Cross Validation
-    # scoring='recall' enforces the algorithm to pick parameters that catch the most diseases
     grid_search = GridSearchCV(
         estimator=config['model'],
         param_grid=config['grid'],
@@ -128,32 +116,25 @@ for name, config in models_and_grids.items():
         n_jobs=-1
     )
 
-    # Fit the grid search
     grid_search.fit(X_train_scaled, y_train)
 
-    # Extract the best model
     best_model = grid_search.best_estimator_
     best_estimators[name] = best_model
 
-    # Evaluate on the unseen Validation Set
     y_val_pred = best_model.predict(X_val_scaled)
     y_val_proba = best_model.predict_proba(X_val_scaled)[:, 1]
 
-    # Calculate key metrics
     val_auc = roc_auc_score(y_val, y_val_proba)
     val_recall = recall_score(y_val, y_val_pred)
     val_acc = accuracy_score(y_val, y_val_pred)
 
-    # NEW METRICS ADDED HERE:
     val_precision = precision_score(y_val, y_val_pred, zero_division=0)
     val_f1 = f1_score(y_val, y_val_pred)
     val_logloss = log_loss(y_val, y_val_proba)
 
-    # Calculate Specificity from Confusion Matrix
     tn, fp, fn, tp = confusion_matrix(y_val, y_val_pred).ravel()
     val_specificity = tn / (tn + fp)
 
-    # Store results
     results.append({
         'Model': name,
         'Best_Params': str(grid_search.best_params_),
@@ -166,14 +147,12 @@ for name, config in models_and_grids.items():
         'Val_LogLoss': val_logloss
     })
 
-    # Export the trained model as a .pkl file for Step 8 (Stacking/Voting)
     model_filename = f'TunedModel_{name}.pkl'
     joblib.dump(best_model, model_filename)
 
 # ==============================================================================
 # 4. SUMMARIZE AND EXPORT RESULTS
 # ==============================================================================
-# Convert results to DataFrame and sort by Validation Recall
 results_df = pd.DataFrame(results).sort_values(by=['Val_Recall', 'Val_ROC_AUC'], ascending=[False, False])
 
 print("\n=================================================================")
