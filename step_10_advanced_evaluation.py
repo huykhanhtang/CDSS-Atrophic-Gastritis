@@ -9,12 +9,11 @@ from sklearn.metrics import roc_curve, roc_auc_score, confusion_matrix
 from sklearn.ensemble import VotingClassifier, StackingClassifier
 from sklearn.linear_model import LogisticRegression
 
-# Suppress warnings for clean output
 warnings.filterwarnings('ignore')
 
 
 # ==============================================================================
-# 1. FAST DELONG TEST IMPLEMENTATION (For comparing AUCs statistically)
+# 1. DELONG TEST IMPLEMENTATION
 # ==============================================================================
 def compute_midrank(x):
     J = np.argsort(x)
@@ -56,10 +55,9 @@ def fastDeLong(predictions_sorted_transposed, label_1D):
 
 
 def calc_delong_pvalue(preds1, preds2, label):
-    """Calculates Z-statistic and P-value for two model predictions using DeLong's test."""
     preds = np.array([preds1, preds2]).T
     aucs, delongcov = fastDeLong(preds, label)
-    # Variance of the difference
+    
     var_diff = delongcov[0, 0] + delongcov[1, 1] - 2 * delongcov[0, 1]
     if var_diff == 0:
         return 0, 1.0  # Models are practically identical
@@ -81,12 +79,10 @@ datasets = {
 
 scaler = joblib.load('CDSS_Feature_Scaler.pkl')
 
-# Define the 7 base models you optimized in Step 7
 base_model_names = ['LogisticRegression', 'AdaBoost', 'BernoulliNB', 'KNeighbors', 'XGBoost', 'SVC', 'RandomForest']
 models = {}
 estimators_for_ensemble = []
 
-# Load the 7 base models
 for name in base_model_names:
     model = joblib.load(f'TunedModel_{name}.pkl')
     models[name] = model
@@ -94,7 +90,6 @@ for name in base_model_names:
     if name in ['LogisticRegression', 'RandomForest', 'BernoulliNB', 'SVC', 'AdaBoost']:
         estimators_for_ensemble.append((name, model))
 
-# Re-initialize and fit ensembles quickly
 print("Fitting Ensemble Models (Soft Voting and Stacking)...")
 X_train = scaler.transform(datasets['Training set'].drop(columns=['Target_AG', 'TCM_Syndromes_1', 'TCM_Syndromes_2']))
 y_train = datasets['Training set']['Target_AG'].values
@@ -109,7 +104,6 @@ models['Stacking'] = StackingClassifier(
 models['Soft voting'].fit(X_train, y_train)
 models['Stacking'].fit(X_train, y_train)
 
-# Arrange model order to match typical paper presentations (Base models first, then Ensembles)
 ordered_model_names = base_model_names + ['Soft voting', 'Stacking']
 
 # ==============================================================================
@@ -121,7 +115,6 @@ fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 fig.suptitle('Diagnostic performance of machine learning models for Atrophic Gastritis risk prediction', fontsize=18,
              fontweight='bold', y=1.05)
 
-# Color palette for 9 models
 colors = sns.color_palette("tab10", 9)
 color_map = {name: colors[i] for i, name in enumerate(ordered_model_names)}
 
@@ -176,19 +169,16 @@ for set_name, df in datasets.items():
     y_true = df['Target_AG'].values
     X_scaled = scaler.transform(df.drop(columns=['Target_AG', 'TCM_Syndromes_1', 'TCM_Syndromes_2']))
 
-    # 4A. Extract Stacking Probabilities (Reference for DeLong)
     stacking_proba = models['Stacking'].predict_proba(X_scaled)[:, 1]
 
     for model_name in ordered_model_names:
         y_proba = models[model_name].predict_proba(X_scaled)[:, 1]
 
-        # Calculate Optimal Threshold (Youden's J) for current model on current set
         fpr, tpr, thresholds = roc_curve(y_true, y_proba)
         youden_idx = np.argmax(tpr - fpr)
         opt_thresh = thresholds[youden_idx]
         y_pred = (y_proba >= opt_thresh).astype(int)
 
-        # Bootstrap for 95% CI
         n_bootstraps = 1000
         rng = np.random.RandomState(42)
         bootstrapped_metrics = {'Sens': [], 'Spec': [], 'PPV': [], 'NPV': [], 'LR+': [], 'LR-': [], 'AUC': []}
@@ -211,14 +201,12 @@ for set_name, df in datasets.items():
             bootstrapped_metrics['AUC'].append(a)
 
 
-        # Format "Mean (Lower-Upper)"
         def fmt_ci(data):
             if len(data) == 0: return "NA"
             mean, lower, upper = np.mean(data), np.percentile(data, 2.5), np.percentile(data, 97.5)
             return f"{mean:.2f} ({lower:.2f}-{upper:.2f})"
 
 
-        # DeLong Test (Comparing against Stacking)
         z_stat, p_val = calc_delong_pvalue(y_proba, stacking_proba, y_true)
         z_str = "-" if model_name == 'Stacking' else f"{z_stat:.2f}"
 
@@ -229,7 +217,6 @@ for set_name, df in datasets.items():
         else:
             p_str = f"{p_val:.3f}"
 
-        # Append to table
         table_results.append({
             'Dataset': set_name,
             'Model': model_name,
@@ -245,13 +232,13 @@ for set_name, df in datasets.items():
         })
 
 # ==============================================================================
-# 5. EXPORT FINAL MASTER TABLE
+# 5. EXPORT FINAL TABLE
 # ==============================================================================
 table2_df = pd.DataFrame(table_results)
 
 # Save to CSV
 table2_df.to_csv('Table_2_Master_Diagnostic_Performance.csv', index=False)
 print("\n=================================================================")
-print("✅ COMPLETED! Table 2 saved as 'Table_2_Master_Diagnostic_Performance.csv'")
+print("COMPLETED! Table 2 saved as 'Table_2_Master_Diagnostic_Performance.csv'")
 print("This CSV file matches the exact structure of the Q1 paper example.")
 print("=================================================================")
