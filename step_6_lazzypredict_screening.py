@@ -41,7 +41,7 @@ models_summary, predictions = clf.fit(X_train, X_val, y_train, y_val)
 # ==============================================================================
 # 4. PROCESS AND EXPORT RESULTS
 # ==============================================================================
-print("\n✅ LazyPredict screening completed!")
+print("\n LazyPredict screening completed!")
 
 pd.set_option('display.max_rows', None)
 
@@ -54,7 +54,7 @@ print("\n-> Saved full results to 'Table_S1_LazyPredict_Screening_Results.csv'")
 # ==============================================================================
 # 5. VISUALIZATION: MODEL PERFORMANCE COMPARISON
 # ==============================================================================
-print("Generating full performance comparison bar chart (300 DPI)...")
+print("Generating full performance comparison bar chart...")
 
 plt.figure(figsize=(12, 15))
 sns.set_theme(style="whitegrid")
@@ -83,6 +83,6 @@ plt.close()
 print("-> Saved 'Figure_S1_LazyPredict_Full_Comparison.png'")
 
 print("\n--------------------------------------------------")
-print("✅ STEP 6 COMPLETED")
+print("STEP 6 COMPLETED")
 print("Next step: Select the top 4-5 core algorithms from this list to proceed to Step 7 (Hyperparameter Tuning).")
 print("--------------------------------------------------")
