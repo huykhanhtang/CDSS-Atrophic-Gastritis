@@ -6,16 +6,16 @@ import shap
 import matplotlib.pyplot as plt
 
 # ==========================================
-# 1. CẤU HÌNH GIAO DIỆN TRANG WEB
+# 1. WEBSITE INTERFACE CONFIGURATION
 # ==========================================
 st.set_page_config(page_title="CDSS Atrophic Gastritic - Hệ thống hỗ trợ ra quyết định lâm sàng Viêm Teo Dạ Dày", layout="wide")
 st.title("🩺 Hệ thống Hỗ trợ Chẩn đoán Viêm Teo Dạ Dày và Hội chứng Y học cổ truyền")
 st.markdown("*Clinical Decision Support System for Atrophic Gastritis and Traditional Medicine Syndromes*")
 st.markdown("---")
 
-# ==========================================
-# 2. TỪ ĐIỂN MAP TÊN BIẾN & GOM NHÓM
-# ==========================================
+# ==================================================
+# 2. VARIABLE NAME MAPPING AND GROUPING DICTIONARY
+# ==================================================
 FEATURE_DICT = {
     'Dem_Age': {'group': 'Dịch tễ và Tiền sử (Epidemiology and Medical history)', 'label': 'Tuổi (Age)', 'type': 'number'},
     'Dem_Occupation_Office_worker': {'group': 'Dịch tễ và Tiền sử (Epidemiology and Medical history)', 'label': 'Nhân viên văn phòng (Office worker)', 'type': 'bool'},
@@ -80,7 +80,7 @@ FEATURE_DICT = {
 }
 
 # ==========================================
-# 3. TẢI MÔ HÌNH, SCALER VÀ EXPLAINER
+# 3. MODEL, SCALER, AND EXPLAINER
 # ==========================================
 @st.cache_resource
 def load_assets():
@@ -90,15 +90,12 @@ def load_assets():
     scaler_2 = joblib.load('Phase2_CDSS_Feature_Scaler.pkl')
     model_2  = joblib.load('Phase2_Final_CDSS_MultiLabel_Model.pkl')
 
-    # Background cho KernelExplainer (tạo bởi make_background.py)
     try:
         bg_1 = joblib.load('shap_background_phase1.pkl')
     except FileNotFoundError:
-        st.error("❌ Thiếu file 'shap_background_phase1.pkl'. Hãy chạy script 'make_background.py' một lần để tạo.")
+        st.error("The file 'shap_background_phase1.pkl' is missing. Please run the script 'make_background.py' once to generate it.")
         st.stop()
 
-    # ✅ KernelExplainer chạy trên CHÍNH model_1, đầu ra = P(class 1 = AG)
-    #    → giải thích luôn nhất quán với kết quả sàng lọc, không phụ thuộc loại model
     explainer_1 = shap.KernelExplainer(
         lambda X: model_1.predict_proba(X)[:, 1],
         bg_1['scaled'].values
@@ -113,14 +110,12 @@ try:
         feat_1_raw = [line.strip() for line in f.readlines()]
     with open('Phase2_List_of_Final_K_Features.txt', 'r') as f:
         feat_2_raw = [line.strip() for line in f.readlines()]
-    # ✅ Thứ tự cột xác suất của model_2 = thứ tự trong file này (sinh ra từ mlb.classes_)
     with open('Phase2_Target_Columns.txt', 'r') as f:
         raw_order = [line.strip().replace('Target_TCM_', '') for line in f]
 except FileNotFoundError as e:
-    st.error(f"❌ Lỗi hệ thống: Không tìm thấy file danh sách. Chi tiết: {e}")
+    st.error(f"System error: List file not found. Details: {e}")
     st.stop()
 
-# ✅ Ánh xạ tên thô → tên hiển thị, giữ NGUYÊN thứ tự của mô hình
 SYNDROME_DISPLAY = {
     'Liver_Stomach_Depressed_Heat': 'Can Vị Uất Nhiệt (Liver Stomach Depressed Heat)',
     'Liver_Stomach_Qi_Stagnation': 'Can Vị Khí Trệ (Liver Stomach Qi Stagnation)',
@@ -131,13 +126,10 @@ SYNDROME_DISPLAY = {
 }
 syndrome_names = [SYNDROME_DISPLAY.get(c, c) for c in raw_order]
 
-# Kiểm chứng MỘT lần (xong có thể xóa): 2 con số phải bằng nhau (= 6)
-# st.caption(f"*Debug: {len(syndrome_names)} chứng hậu | {len(model_2.estimators_)} estimators*")
-
 all_unique_features = sorted(list(set(feat_1_raw + feat_2_raw)))
 
 # ==========================================
-# 4. GIAO DIỆN NHẬP LIỆU (SIDEBAR)
+# 4. DATA ENTRY INTERFACE (SIDEBAR)
 # ==========================================
 st.sidebar.header("📋 Nhập Thông Tin Lâm Sàng (Enter clinical information)")
 user_inputs = {}
@@ -159,19 +151,18 @@ with st.sidebar.form(key='patient_form'):
     submit_button = st.form_submit_button(label='🚀 Phân tích Dữ liệu (Clinical data analysis)')
 
 # ==========================================
-# 5. LUỒNG XỬ LÝ CHẨN ĐOÁN
+# 5. DIAGNOSTIC WORKFLOW
 # ==========================================
 if submit_button:
     input_numeric = {k: (int(v) if isinstance(v, bool) else v) for k, v in user_inputs.items()}
 
     with st.spinner('Hệ thống đang xử lý dữ liệu (System processing data)...'):
         # -----------------------------------
-        # PHASE 1: SÀNG LỌC VIÊM TEO (AG)
+        # PHASE 1: ATROPHIC GASTRITIS (AG) SCREENING
         # -----------------------------------
         scaler_1_feats = list(scaler_1.feature_names_in_) if hasattr(scaler_1, 'feature_names_in_') else feat_1_raw
         model_1_feats  = list(model_1.feature_names_in_)  if hasattr(model_1, 'feature_names_in_')  else feat_1_raw
 
-        # Ép cột theo Scaler -> Scale -> Ép cột theo Model
         data_for_scaler_1 = pd.DataFrame([input_numeric]).reindex(columns=scaler_1_feats, fill_value=0)
         scaled_array_1 = scaler_1.transform(data_for_scaler_1)
         scaled_df_1 = pd.DataFrame(scaled_array_1, columns=scaler_1_feats)
@@ -179,7 +170,6 @@ if submit_button:
         X_p1_final = scaled_df_1.reindex(columns=model_1_feats)
         data_p1_raw_final = data_for_scaler_1.reindex(columns=model_1_feats)
 
-        # Dự đoán (column 1 = class dương theo nhãn train)
         prob_ag = model_1.predict_proba(X_p1_final)[0][1]
         threshold_ag = 0.4081
         is_ag_positive = prob_ag >= threshold_ag
@@ -198,7 +188,7 @@ if submit_button:
             )
 
         # ==========================================
-        # MODULE XAI: AI TỰ ĐỘNG GIẢI THÍCH (SHAP)
+        # XAI MODULE: EXPLAINABLE AI (SHAP)
         # ==========================================
         with st.expander(
                 "🔍 Nhấn vào đây để xem AI giải thích cơ chế chẩn đoán cho bệnh nhân này\n\n"
@@ -206,20 +196,16 @@ if submit_button:
                 expanded=True
         ):
 
-            # SHAP tính trên CHÍNH model_1, cùng không gian dữ liệu (scaled)
             shap_values = np.asarray(
                 explainer_1.shap_values(X_p1_final.values, nsamples=500, silent=True)
             ).reshape(-1)
             expected_val = float(explainer_1.expected_value)
 
-            # Debug: 2 con số này phải gần như trùng nhau (cùng 1 model, 1 đầu ra)
-            # st.caption(f"*Debug nội bộ: prob_ag={prob_ag:.3f} | base + ΣSHAP={expected_val + shap_values.sum():.3f}*")
-
             st.markdown("##### 📝 Giải thích bằng ngôn ngữ y khoa (Explanation in medical terms):")
             symptoms_pushing_up = []
             symptoms_pushing_down = []
-            symptoms_pushing_up_en = []  # ← danh sách tiếng Anh
-            symptoms_pushing_down_en = []  # ← danh sách tiếng Anh
+            symptoms_pushing_up_en = []
+            symptoms_pushing_down_en = []
 
             for i, feat_name in enumerate(model_1_feats):
                 full_label = FEATURE_DICT.get(feat_name, {}).get('label', feat_name)
@@ -264,7 +250,6 @@ if submit_button:
             st.markdown("##### 📊 Biểu đồ trọng số (SHAP Waterfall):")
 
 
-            # ✅ Hàm tạo nhãn song ngữ Việt - Anh
             def bilingual_label(feat):
                 label = FEATURE_DICT.get(feat, {}).get('label', feat)
                 if ' (' in label:
@@ -278,13 +263,13 @@ if submit_button:
             patient_explanation = shap.Explanation(
                 values=shap_values,
                 base_values=expected_val,
-                data=data_p1_raw_final.iloc[0].values,  # vẫn hiển thị 0/1 gốc
+                data=data_p1_raw_final.iloc[0].values,
                 feature_names=display_feature_names
             )
 
-            fig, ax = plt.subplots(figsize=(11, 5))  # nới rộng khung để nhãn song ngữ không bị chật
+            fig, ax = plt.subplots(figsize=(11, 5))
             shap.plots.waterfall(patient_explanation, show=False, max_display=8)
-            plt.yticks(fontsize=9)  # thu nhỏ chữ trục Y một chút cho thoáng
+            plt.yticks(fontsize=9)
             plt.tight_layout()
             st.pyplot(fig)
             plt.close(fig)
@@ -292,7 +277,7 @@ if submit_button:
         st.markdown("---")
 
         # -----------------------------------
-        # PHASE 2: CHẨN ĐOÁN CHỨNG HẬU
+        # PHASE 2: DIAGNOSIS OF SYNDROMES
         # -----------------------------------
         st.subheader("☯️ 2. Biện chứng Y học cổ truyền (Mô hình Đa nhãn)")
         st.markdown("*Traditional Medicine Syndrome Differentiation (Multi-label Model)*")
