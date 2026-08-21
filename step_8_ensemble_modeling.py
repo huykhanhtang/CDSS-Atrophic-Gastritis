@@ -118,7 +118,7 @@ for name, ensemble_model in ensembles.items():
         best_ensemble_model = ensemble_model
 
 joblib.dump(best_ensemble_model, 'Final_CDSS_Screening_Model.pkl')
-print(f"\n✅ Saved '{best_ensemble_name}' as 'Final_CDSS_Screening_Model.pkl' for Step 9.")
+print(f"\n Saved '{best_ensemble_name}' as 'Final_CDSS_Screening_Model.pkl' for Step 9.")
 
 # ==============================================================================
 # 5. VISUALIZATION: ROC CURVES (FIGURE 5)
