@@ -11,7 +11,6 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import (f1_score, precision_score, recall_score,
                              hamming_loss, accuracy_score, classification_report)
 
-# Nhập 7 thuật toán cơ sở và 2 kiến trúc kết hợp
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import (RandomForestClassifier, AdaBoostClassifier,
                               VotingClassifier, StackingClassifier)
@@ -38,7 +37,6 @@ y_val = val_df[target_tcm_cols]
 X_train = train_df.drop(columns=['Target_AG'] + target_tcm_cols)
 X_val = val_df.drop(columns=['Target_AG'] + target_tcm_cols)
 
-# Chuẩn hóa dữ liệu và lưu Scaler riêng cho Phase 2 CDSS
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_val_scaled = scaler.transform(X_val)
@@ -49,7 +47,6 @@ print(f"-> Saved scaler as 'Phase2_CDSS_Feature_Scaler.pkl'")
 # ==============================================================================
 # 2. CONFIGURE BASE MODELS & GRIDS (WRAPPED IN OvR)
 # ==============================================================================
-# Thu gọn Grid để tiết kiệm thời gian tính toán vì OvR sẽ nhân 6 lần thời gian chạy
 base_models = {
     'LogisticRegression': {
         'model': LogisticRegression(class_weight='balanced', random_state=42),
@@ -93,30 +90,26 @@ best_estimators_dict = {}
 for name, config in base_models.items():
     print(f" -> Tuning {name} (Multi-label OvR)...")
 
-    # Bọc thuật toán lõi vào OneVsRestClassifier
     ovr_model = OneVsRestClassifier(config['model'])
 
-    # GridSearch trên lớp vỏ OvR (Sử dụng Macro F1 làm tiêu chuẩn vàng)
     grid_search = GridSearchCV(
         estimator=ovr_model,
         param_grid=config['grid'],
-        cv=3,  # Giảm xuống 3-Fold để tiết kiệm thời gian
+        cv=3,  
         scoring='f1_macro',
         n_jobs=-1
     )
 
     grid_search.fit(X_train_scaled, y_train)
     best_model = grid_search.best_estimator_
-    best_estimators_dict[name] = best_model.estimator  # Lưu lõi tốt nhất cho Ensemble
+    best_estimators_dict[name] = best_model.estimator  
 
-    # Dự đoán trên tập Validation
     y_val_pred = best_model.predict(X_val_scaled)
 
-    # Tính toán các chỉ số đặc thù của Multi-label
     macro_f1 = f1_score(y_val, y_val_pred, average='macro')
     micro_f1 = f1_score(y_val, y_val_pred, average='micro')
     h_loss = hamming_loss(y_val, y_val_pred)
-    subset_acc = accuracy_score(y_val, y_val_pred)  # Exact Match Ratio
+    subset_acc = accuracy_score(y_val, y_val_pred)
 
     results.append({
         'Model': name,
@@ -126,7 +119,6 @@ for name, config in base_models.items():
         'Exact_Match_Ratio': subset_acc
     })
 
-    # Lưu mô hình
     joblib.dump(best_model, f'Phase2_Tuned_{name}.pkl')
 
 # ==============================================================================
@@ -134,7 +126,6 @@ for name, config in base_models.items():
 # ==============================================================================
 print("\nConstructing Multi-label Ensemble Classifiers...")
 
-# Chọn 5 mô hình cốt lõi xuất sắc nhất để đưa vào hội đồng (tránh nhiễu)
 ensemble_candidates = [
     ('lr', best_estimators_dict['LogisticRegression']),
     ('rf', best_estimators_dict['RandomForest']),
@@ -143,7 +134,6 @@ ensemble_candidates = [
     ('nb', best_estimators_dict['BernoulliNB'])
 ]
 
-# 4.1. Khởi tạo lõi Ensemble
 core_voting = VotingClassifier(estimators=ensemble_candidates, voting='soft', n_jobs=-1)
 core_stacking = StackingClassifier(
     estimators=ensemble_candidates,
@@ -151,7 +141,6 @@ core_stacking = StackingClassifier(
     cv=3, n_jobs=-1
 )
 
-# 4.2. Bọc Ensemble vào OneVsRestClassifier để hỗ trợ Đa nhãn
 ensembles = {
     'Soft_Voting_Ensemble': OneVsRestClassifier(core_voting),
     'Stacking_Ensemble': OneVsRestClassifier(core_stacking)
@@ -180,15 +169,13 @@ for name, ens_model in ensembles.items():
         'Exact_Match_Ratio': subset_acc
     })
 
-    # Tìm mô hình xuất sắc nhất
     if macro_f1 > highest_macro_f1:
         highest_macro_f1 = macro_f1
         best_ensemble_name = name
         best_ensemble_model = ens_model
 
-# Xuất mô hình Vô địch cho phần mềm CDSS
 joblib.dump(best_ensemble_model, 'Phase2_Final_CDSS_MultiLabel_Model.pkl')
-print(f"\n✅ Crowned '{best_ensemble_name}' as the Multi-label Champion!")
+print(f"\n Crowned '{best_ensemble_name}' as the Multi-label Champion!")
 print(f"-> Saved as 'Phase2_Final_CDSS_MultiLabel_Model.pkl'")
 
 # ==============================================================================
@@ -198,17 +185,15 @@ results_df = pd.DataFrame(results).sort_values(by='Macro_F1', ascending=False)
 results_df.to_csv('Phase2_Table_S2_MultiLabel_Tuning.csv', index=False)
 
 print("\n=================================================================")
-print("🏆 MULTI-LABEL PERFORMANCE ON VALIDATION SET:")
+print("MULTI-LABEL PERFORMANCE ON VALIDATION SET:")
 print("=================================================================")
 print(results_df.to_string(index=False))
 print("=================================================================")
 
-# Vẽ Biểu đồ so sánh
 print("\nGenerating Figure 4: Multi-label Models Comparison...")
 plt.figure(figsize=(12, 7))
 sns.set_theme(style="whitegrid")
 
-# Gán màu đỏ cho 2 Ensemble để nổi bật, xanh lam cho Base models
 colors = ['#d62728' if 'Ensemble' in m else '#1f77b4' for m in results_df['Model']]
 
 ax = sns.barplot(x='Macro_F1', y='Model', data=results_df, palette=colors)
@@ -226,4 +211,4 @@ plt.tight_layout()
 plt.savefig('Phase2_Figure_4_Model_Comparison.png', dpi=300, bbox_inches='tight')
 plt.close()
 print("-> Saved 'Phase2_Figure_4_Model_Comparison.png'")
-print("\n✅ PHASE 2 STEP 4 COMPLETED SUCCESSFULLY.")
+print("\n PHASE 2 STEP 4 COMPLETED")
